@@ -1,5 +1,5 @@
 from typing import Optional
-from sqlmodel import SQLModel, Field
+from sqlmodel import SQLModel, Field # type: ignore
 from datetime import datetime
 
 
@@ -9,15 +9,15 @@ class TokenBase(SQLModel):
     Tokenbase model for Token.
 
     Attributes:
-        user_id (int):
+        email (int):
         access_token (int): 
         refresh_token
         expires_at: 
     """
-    user_id: int  # Name of the token
-    access_token: str  # Description of the token
+    email: str
+    access_token: str 
     refresh_token: str
-    expires_at: datetime
+    expires_at: int
 
 
 class Token(TokenBase, table=True):
