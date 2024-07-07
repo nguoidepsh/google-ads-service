@@ -1,43 +1,23 @@
-from typing import Optional
 import uuid as uuid_pkg
+from typing import List
+
 
 from sqlalchemy import SmallInteger, Column
-from sqlmodel import Field, SQLModel # type: ignore
-
+from sqlmodel import Field, SQLModel, Relationship
 from models.base_model import TimestampModel, UUIDModel
-
-
-# Id
-# Name
-# RefLink
-# Cpc
-# Countries (JSON)
-# {'Vietnam':1, 'UnitedStates':1,}
-# Từ khóa (JSON)
-# {'Jasper':1, 'the best market':0,}
-# Thiết bị (JSON)
-# {'Desktop':80, 'mobile':-100,'tablet':-50,}
-# OfferId
-# Status
-# 1: Available
-# 2: Accept
-# 3: Deny
 
 
 class TicketBase(SQLModel):
    name: str = Field(max_length=255, nullable=False)
-   offer_id: uuid_pkg.UUID
+   offer_id: uuid_pkg.UUID = Field(nullable=False, foreign_key="Offers.id")
    status: int = Field(default=0, sa_column=Column(SmallInteger()))
 
 
-1
-class Ticket(
-   TimestampModel,
-   TicketBase,
-   UUIDModel,
-   table=True
-):
+class Ticket(TimestampModel, TicketBase, UUIDModel, table=True):
    __tablename__ = f"Tickets"
+
+   tasks: list["Task"] = Relationship(back_populates="ticket")
+
 
 
 class TicketRead(TicketBase, UUIDModel):
@@ -45,8 +25,11 @@ class TicketRead(TicketBase, UUIDModel):
 
 
 class TicketCreate(TicketBase):
-   ...
+   tasks: List["TaskCreate"]
+
 
 
 class TicketPatch(TicketBase):
     ...
+
+

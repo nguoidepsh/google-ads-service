@@ -26,13 +26,12 @@ def get_tokens_func(session: DB_SESSION):
     raise HTTPException(status_code=404, detail="Tokens not found")
 
 async def login_func(request: Request):
-    url = request.url_for('auth')
-    return await oauth.google.authorize_redirect(request, url)
+    return await oauth.google.authorize_redirect(request, "https://dev.nguoidepsh.com/auth") # type: ignore
 
 async def create_token_func(request: Request, session: DB_SESSION):
     # Verify that token details are provided
     try:
-        token_details = await oauth.google.authorize_access_token(request)
+        token_details = await oauth.google.authorize_access_token(request) # type: ignore
         token = Token(email=token_details['userinfo'].email, access_token=token_details['access_token'], refresh_token=token_details['refresh_token'], expires_at=token_details['expires_at'])
         # Add the Token instance to the session and commit the transaction
         session.add(token)
