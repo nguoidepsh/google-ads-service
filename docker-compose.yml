@@ -1,0 +1,12 @@
+version: "3.8"
+services:
+    google-ads-service:
+        build:
+            context: .
+            dockerfile: Dockerfile
+        ports:
+            - 8001:8081
+        volumes:
+            - ./app/:/app
+        env_file:
+            - .env
