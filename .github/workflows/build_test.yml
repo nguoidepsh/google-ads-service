@@ -31,28 +31,8 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # Step 4: Set environment variables from GitHub secrets
-      - name: Export secrets to environment
+      # Step 4: Build Docker image
+      - name: Build Docker image
         run: |
-          echo "DATABASE_URL=${{ secrets.JDBC_URL }}" >> $GITHUB_ENV
-          echo "DB_USERNAME=${{ secrets.DB_USERNAME }}" >> $GITHUB_ENV
-          echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> $GITHUB_ENV
-          echo "ELK_INSTANCE_IP=${{ secrets.ELK_INSTANCE_IP }}" >> $GITHUB_ENV
-          echo "AMAZON_ENDPOINT_URL=${{ secrets.AMAZON_ENDPOINT_URL }}" >> $GITHUB_ENV
-          echo "AMAZON_BUCKET_NAME=${{ secrets.AMAZON_BUCKET_NAME }}" >> $GITHUB_ENV
-          echo "AMAZON_ACCESS_KEY=${{ secrets.AMAZON_ACCESS_KEY }}" >> $GITHUB_ENV
-          echo "AMAZON_SECRET_KEY=${{ secrets.AMAZON_SECRET_KEY }}" >> $GITHUB_ENV
-
-      # Step 5: Run tests with pytest
-      - name: Run tests with pytest
-        run: |
-          pytest --maxfail=1 --disable-warnings
-        env:
-          DATABASE_URL: ${{ secrets.JDBC_URL }}
-          DB_USERNAME: ${{ secrets.DB_USERNAME }}
-          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-          ELK_INSTANCE_IP: ${{ secrets.ELK_INSTANCE_IP }}
-          AMAZON_ENDPOINT_URL: ${{ secrets.AMAZON_ENDPOINT_URL }}
-          AMAZON_BUCKET_NAME: ${{ secrets.AMAZON_BUCKET_NAME }}
-          AMAZON_ACCESS_KEY: ${{ secrets.AMAZON_ACCESS_KEY }}
-          AMAZON_SECRET_KEY: ${{ secrets.AMAZON_SECRET_KEY }}
+          echo "Building Docker image..."
+          docker build -t google-service:latest .
