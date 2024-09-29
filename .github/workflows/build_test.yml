@@ -1,0 +1,58 @@
+name: Build and Test for Python
+
+on:
+  push:
+    branches:
+      - main
+      - dev
+  pull_request:
+    branches:
+      - main
+      - dev
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout the code from the repository
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      # Step 2: Set up Python environment (for example Python 3.9)
+      - name: Set up Python 3.9
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.9'
+
+      # Step 3: Install dependencies from requirements.txt
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # Step 4: Set environment variables from GitHub secrets
+      - name: Export secrets to environment
+        run: |
+          echo "DATABASE_URL=${{ secrets.JDBC_URL }}" >> $GITHUB_ENV
+          echo "DB_USERNAME=${{ secrets.DB_USERNAME }}" >> $GITHUB_ENV
+          echo "DB_PASSWORD=${{ secrets.DB_PASSWORD }}" >> $GITHUB_ENV
+          echo "ELK_INSTANCE_IP=${{ secrets.ELK_INSTANCE_IP }}" >> $GITHUB_ENV
+          echo "AMAZON_ENDPOINT_URL=${{ secrets.AMAZON_ENDPOINT_URL }}" >> $GITHUB_ENV
+          echo "AMAZON_BUCKET_NAME=${{ secrets.AMAZON_BUCKET_NAME }}" >> $GITHUB_ENV
+          echo "AMAZON_ACCESS_KEY=${{ secrets.AMAZON_ACCESS_KEY }}" >> $GITHUB_ENV
+          echo "AMAZON_SECRET_KEY=${{ secrets.AMAZON_SECRET_KEY }}" >> $GITHUB_ENV
+
+      # Step 5: Run tests with pytest
+      - name: Run tests with pytest
+        run: |
+          pytest --maxfail=1 --disable-warnings
+        env:
+          DATABASE_URL: ${{ secrets.JDBC_URL }}
+          DB_USERNAME: ${{ secrets.DB_USERNAME }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          ELK_INSTANCE_IP: ${{ secrets.ELK_INSTANCE_IP }}
+          AMAZON_ENDPOINT_URL: ${{ secrets.AMAZON_ENDPOINT_URL }}
+          AMAZON_BUCKET_NAME: ${{ secrets.AMAZON_BUCKET_NAME }}
+          AMAZON_ACCESS_KEY: ${{ secrets.AMAZON_ACCESS_KEY }}
+          AMAZON_SECRET_KEY: ${{ secrets.AMAZON_SECRET_KEY }}
