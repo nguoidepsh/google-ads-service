@@ -97,7 +97,7 @@ jobs:
             echo "Running a new container 'google-service' with environment variables..."
             docker run -d --name google-service \
               -p 13005:13005 \
-              -e DATABASE_URL='${{ secrets.DATABASE_URL }}' \
+              -e DATABASE_URL='${{ secrets.JDBC_URL }}' \
               -e CLIENT_ID='${{ secrets.CLIENT_ID }}' \
               -e CLIENT_SECRET='${{ secrets.CLIENT_SECRET }}' \
               -e DEVELOPER_TOKEN='${{ secrets.DEVELOPER_TOKEN }}' \
