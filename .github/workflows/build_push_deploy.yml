@@ -1,0 +1,122 @@
+name: Build, Push, and Deploy Based on Git Tag
+
+on:
+  workflow_dispatch:  # Manual trigger
+
+jobs:
+  build-push-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Checkout the repository
+      - name: Checkout code
+        uses: actions/checkout@v2
+        with:
+          fetch-depth: 0  # Fetch all commit history to access tags
+
+      # Step 2: Extract the tag from GITHUB_REF if it's a tag reference
+      - name: Extract Tag from GITHUB_REF
+        id: extract_tag
+        run: |
+          if [[ "${{ github.ref }}" == refs/tags/* ]]; then
+            TAG_NAME=${{ github.ref }}
+            TAG_NAME=${TAG_NAME#refs/tags/}
+            echo "IMAGE_TAG=${TAG_NAME}" >> $GITHUB_ENV
+          else
+            echo "Not a tag reference: ${{ github.ref }}"
+            exit 1  # Fail if this isn't a tag reference
+          fi
+
+      # Step 3: Print the extracted tag for debugging
+      - name: Debug Input Value
+        run: |
+          echo "GitHub ref: ${{ github.ref }}"
+          echo "Extracted tag: $IMAGE_TAG"
+
+      # Step 4: Set up AWS credentials
+      - name: Set up AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AMAZON_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.AMAZON_SECRET_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      # Step 5: Log in to Amazon ECR
+      - name: Log in to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v1
+
+      # Step 6: Build Docker image
+      - name: Build Docker image
+        run: |
+          REPOSITORY_URI=${{ secrets.ECR_REPOSITORY_URL }}
+          IMAGE_TAG=${{ env.IMAGE_TAG }}
+          echo "Building Docker image with tag: $IMAGE_TAG..."
+          docker build -t $REPOSITORY_URI:$IMAGE_TAG .
+        env:
+          IMAGE_TAG: ${{ env.IMAGE_TAG }}
+          REPOSITORY_URI: ${{ secrets.ECR_REPOSITORY_URL }}
+
+      # Step 7: Push Docker image to ECR
+      - name: Push Docker image to ECR
+        run: |
+          REPOSITORY_URI=${{ secrets.ECR_REPOSITORY_URL }}
+          IMAGE_TAG=${{ env.IMAGE_TAG }}
+          echo "Pushing Docker image with tag: $IMAGE_TAG..."
+          docker push $REPOSITORY_URI:$IMAGE_TAG
+        env:
+          IMAGE_TAG: ${{ env.IMAGE_TAG }}
+          REPOSITORY_URI: ${{ secrets.ECR_REPOSITORY_URL }}
+
+      # Step 8: SSH to EC2 instance and deploy
+      - name: SSH to EC2 instance and deploy
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            REPOSITORY_URI=${{ secrets.ECR_REPOSITORY_URL }}
+            IMAGE_TAG=${{ env.IMAGE_TAG }}
+
+            echo "Logging into ECR..."
+            aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin $REPOSITORY_URI
+            
+            echo "Pulling Docker image with tag: $IMAGE_TAG..."
+            docker pull $REPOSITORY_URI:$IMAGE_TAG
+            
+            echo "Checking if the container 'google-service' exists..."
+            if [ "$(docker ps -aq -f name=google-service)" ]; then
+                echo "Stopping existing container 'google-service'..."
+                docker stop google-service
+                echo "Removing existing container 'google-service'..."
+                docker rm google-service
+            else
+                echo "No existing container 'google-service' found."
+            fi
+            
+            echo "Running a new container 'google-service' with environment variables..."
+            docker run -d --name google-service \
+              -p 13005:13005 \
+              -e DATABASE_URL='${{ secrets.JDBC_URL }}' \
+              -e CLIENT_ID='${{ secrets.CLIENT_ID }}' \
+              -e CLIENT_SECRET='${{ secrets.CLIENT_SECRET }}' \
+              -e DEVELOPER_TOKEN='${{ secrets.DEVELOPER_TOKEN }}' \
+              -e AWS_REGION='${{ secrets.AWS_REGION }}' \
+              $REPOSITORY_URI:$IMAGE_TAG
+            
+            echo "Verifying if the container 'google-service' is running..."
+            if [ "$(docker ps -q -f name=google-service)" ]; then
+                echo "Container 'google-service' is running successfully."
+            else
+                echo "Error: Container 'google-service' failed to start."
+                docker logs google-service
+                exit 1
+            fi
+        env:
+          IMAGE_TAG: ${{ env.IMAGE_TAG }}
+          REPOSITORY_URI: ${{ secrets.ECR_REPOSITORY_URL }}
+
+      # Step 9: Logout from Amazon ECR
+      - name: Logout from Amazon ECR
+        run: |
+          docker logout ${{ secrets.ECR_REGISTRY }}
