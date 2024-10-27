@@ -7,6 +7,7 @@ from controllers.email_controller import (
     login_func,
 )
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import HTMLResponse
 from schemas.email_schema import Email, EmailCreate
 
 email_router = APIRouter()
@@ -18,7 +19,17 @@ async def auth(token: Annotated[EmailCreate, Depends(create_email)]):
         raise HTTPException(
             status_code=500, detail="Some things went wrong, while creating token."
         )
-    return token
+    html_content = f"""
+                        <script>
+                            window.opener.postMessage({{
+                                token: "{token.refresh_token}",
+                                email: "{token.email}",
+                            }},"*");
+                            window.close();
+                        </script>
+                            """
+
+    return HTMLResponse(content=html_content)
 
 
 @email_router.get("/get_emails", response_model=list[Email])

@@ -16,21 +16,24 @@ def get_email_by_mail(session: DB_SESSION, email: str):
 async def login_func(request: Request):
     return await OAUTH.google.authorize_redirect(request, "https://dev.nguoidepsh.com/auth")  # type: ignore
 
-
 async def create_email(request: Request, session: DB_SESSION):
     email_details = await OAUTH.google.authorize_access_token(request)  # type: ignore
     userinfo = request.state.auth_data
 
-    email = Email(
-        
-        uuid=userinfo["uuid"],
-        email=email_details["userinfo"].email,
-        access_token=email_details["access_token"],
-        refresh_token=email_details["refresh_token"],
-        expires_at=email_details["expires_at"],
-    )
-    # Add the Email instance to the session and commit the transaction
-    session.add(email)
+    email = get_email_by_mail(session, email_details["userinfo"].email)
+    if email:
+        email.access_token = email_details["access_token"]
+        email.refresh_token = email_details["refresh_token"]
+        email.expires_at = email_details["expires_at"]
+    else:
+        email = Email(
+            uuid=userinfo["uuid"],
+            email=email_details["userinfo"].email,
+            access_token=email_details["access_token"],
+            refresh_token=email_details["refresh_token"],
+            expires_at=email_details["expires_at"],
+        )
+        session.add(email)
     session.commit()
     session.refresh(email)
     return email
