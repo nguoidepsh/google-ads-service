@@ -2,8 +2,12 @@ import os
 import sys
 from logging.config import fileConfig
 
+import alembic_postgresql_enum
 from alembic import context
+from models.account_model import Account
 from models.email_model import Email
+from models.provider_model import Provider
+from models.request_model import Request
 from sqlalchemy import engine_from_config, pool
 from sqlmodel import SQLModel
 

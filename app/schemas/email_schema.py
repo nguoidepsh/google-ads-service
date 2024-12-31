@@ -1,6 +1,7 @@
 from pydantic import BaseModel
+from sqlmodel import Field
+
 from schemas.base_schema import TimestampModel, UUIDModel
-from sqlmodel import Field, SQLModel
 
 
 class EmailBase(BaseModel):

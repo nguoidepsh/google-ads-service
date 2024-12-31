@@ -16,6 +16,7 @@ def get_email_by_mail(session: DB_SESSION, email: str):
 async def login_func(request: Request):
     return await OAUTH.google.authorize_redirect(request, "https://dev.nguoidepsh.com/auth")  # type: ignore
 
+
 async def create_email(request: Request, session: DB_SESSION):
     email_details = await OAUTH.google.authorize_access_token(request)  # type: ignore
     userinfo = request.state.auth_data
@@ -41,5 +42,4 @@ async def create_email(request: Request, session: DB_SESSION):
 
 async def get_email_by_uuid(request: Request, session: DB_SESSION):
     userinfo = request.state.auth_data
-    print(userinfo)
     return session.exec(select(Email).where(Email.uuid == int(userinfo["uuid"]))).all()
