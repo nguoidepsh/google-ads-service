@@ -34,3 +34,7 @@ class AccountCreate(AccountBase): ...
 
 class Account(UUIDModel, TimestampModel):
     uuid: int
+
+
+class AccountUpdate(AccountBase):     
+    id: str = Field(max_length=255, nullable=False, unique=True)
