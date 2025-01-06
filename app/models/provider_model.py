@@ -9,3 +9,11 @@ class Provider(TimestampModel, ProviderBase, UUIDModel, table=True):
     # relationships
     accounts: list["Account"] = Relationship(back_populates="provider")
     email_relationship: "Email" = Relationship(back_populates="providers")
+
+
+class ProviderCreate(ProviderBase):
+    pass
+
+
+class ProviderUpdate(ProviderBase):
+    id: str
