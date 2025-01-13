@@ -1,11 +1,12 @@
 from typing import List
-from schemas.account_schema import AccountCreate, AccountUpdate
+
 from db.db_connector import DB_SESSION
 from fastapi import Depends, Request
 from models.account_model import Account
+from schemas.account_schema import AccountCreate, AccountUpdate
+from sqlalchemy.exc import IntegrityError
 from sqlmodel import select
 from starlette.exceptions import HTTPException
-from sqlalchemy.exc import IntegrityError
 
 
 async def get_accounts_by_uuid(session: DB_SESSION, request: Request):
@@ -34,16 +35,23 @@ async def valid_owner(
 
 
 async def get_accounts(session: DB_SESSION):
-    return session.exec(
-        select(Account)
-    ).all()
+    return session.exec(select(Account)).all()
 
 
-async def create_account(session: DB_SESSION, request: Request, account_data: AccountCreate):
+async def create_account(
+    session: DB_SESSION, request: Request, account_data: AccountCreate
+):
     """
     Create a new account.
     """
     userinfo = request.state.auth_data
+    existing_account = await get_account_by_customer_id(
+        session, account_data.customer_id
+    )
+    if existing_account:
+        raise HTTPException(
+            status_code=400, detail="Account with this customer ID already exists"
+        )
     account = Account(**account_data.model_dump(), uuid=userinfo["uuid"])
     session.add(account)
     session.commit()
@@ -52,9 +60,7 @@ async def create_account(session: DB_SESSION, request: Request, account_data: Ac
 
 
 async def create_accounts(
-    session: DB_SESSION,
-    request: Request,
-    accounts_data: List[AccountCreate]
+    session: DB_SESSION, request: Request, accounts_data: List[AccountCreate]
 ) -> List[Account]:
     """
     Create multiple accounts.
@@ -64,42 +70,41 @@ async def create_accounts(
     failed_accounts = []
     for account_data in accounts_data:
         try:
-            existing_account = session.query(Account).filter(
-                Account.customer_id == account_data.customer_id).first()
+            existing_account = (
+                session.query(Account)
+                .filter(Account.customer_id == account_data.customer_id)
+                .first()
+            )
             if existing_account:
-                failed_accounts.append({
-                    "account_data": account_data,
-                    "error": f"Customer ID {account_data.customer_id} already exists."
-                })
+                failed_accounts.append(
+                    {
+                        "account_data": account_data,
+                        "error": f"Customer ID {account_data.customer_id} already exists.",
+                    }
+                )
                 continue
 
-            account = Account(**account_data.model_dump(),
-                              uuid=userinfo["uuid"])
+            account = Account(**account_data.model_dump(), uuid=userinfo["uuid"])
             session.add(account)
             created_accounts.append(account)
 
         except Exception as e:
             session.rollback()
-            failed_accounts.append({
-                "account_data": account_data,
-                "error": f"Error: {str(e)}"
-            })
+            failed_accounts.append(
+                {"account_data": account_data, "error": f"Error: {str(e)}"}
+            )
             continue
     session.commit()
     for account in created_accounts:
         session.refresh(account)
-    return {
-        "created_accounts": created_accounts,
-        "failed_accounts": failed_accounts
-    }
+    return {"created_accounts": created_accounts, "failed_accounts": failed_accounts}
 
 
 async def update_account(session: DB_SESSION, updates: AccountUpdate):
     """
     Update an existing account by id.
     """
-    account = session.exec(select(Account).where(
-        Account.id == updates.id)).first()
+    account = session.exec(select(Account).where(Account.id == updates.id)).first()
     if not account:
         raise HTTPException(status_code=404, detail="Account not found")
 

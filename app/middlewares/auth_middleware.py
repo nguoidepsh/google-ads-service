@@ -16,6 +16,7 @@ async def check_permission(
         headers={"User-Agent": "Mozilla/5.0"},
         verify=False,
     )
+
     if response.status_code != 200:
         raise HTTPException(status_code=response.status_code, detail=response.json())
     # Add response data to request state

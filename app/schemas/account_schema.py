@@ -24,7 +24,7 @@ class AccountBase(BaseModel):
         expires_at:
     """
 
-    customer_id: str = Field(max_length=255, nullable=False, unique=True)
+    customer_id: str = Field(max_length=10, nullable=False, unique=True, regex=r"^\d+$")
     status: AccountStatus = Field(nullable=False)
     provider_id: UUID = Field(default=None, foreign_key="Providers.id")
 
@@ -36,5 +36,5 @@ class Account(UUIDModel, TimestampModel):
     uuid: int
 
 
-class AccountUpdate(AccountBase):     
-    id: str = Field(max_length=255, nullable=False, unique=True)
+class AccountUpdate(BaseModel):
+    uuid: int
