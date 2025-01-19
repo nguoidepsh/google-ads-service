@@ -6,7 +6,7 @@ from controllers.requests_controller import (
     get_requests,
     get_requests_by_uuid,
 )
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from models.request_model import Request
 from schemas.base_schema import MultipeResponseModel
 
